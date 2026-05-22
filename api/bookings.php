@@ -4,9 +4,13 @@ require_once '../config/db.php';
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Max-Age: 86400');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit;
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
 
 $db = getDB();
 $method = $_SERVER['REQUEST_METHOD'];
@@ -18,6 +22,11 @@ if ($method === 'GET') {
 
 } elseif ($method === 'POST') {
     $data = json_decode(file_get_contents('php://input'), true);
+    if (!$data) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid JSON input']);
+        exit;
+    }
     $stmt = $db->prepare("INSERT INTO bookings (patient, service, date, price, statut) VALUES (?, ?, ?, ?, ?)");
     $stmt->execute([$data['patient'], $data['service'], $data['date'], $data['price'], $data['statut']]);
     $data['id'] = $db->lastInsertId();
