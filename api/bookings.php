@@ -17,14 +17,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 $id = $_GET['id'] ?? null;
 
 if ($method === 'GET') {
-    $stmt = $db->query("
-        SELECT b.id, c.patient, b.client_id, s.nom AS service, b.service_id,
-               b.`date`, b.price, b.statut, b.created_at
-        FROM bookings b
-        LEFT JOIN clients c ON b.client_id = c.id
-        LEFT JOIN services s ON b.service_id = s.id
-        ORDER BY b.`date` ASC
-    ");
+    $stmt = $db->query("SELECT * FROM bookings ORDER BY `date` ASC");
     echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
 
 } elseif ($method === 'POST') {
@@ -35,19 +28,10 @@ if ($method === 'GET') {
         exit;
     }
     try {
-        $stmt = $db->prepare("INSERT INTO bookings (client_id, service_id, `date`, price, statut) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$data['client_id'], $data['service_id'], $data['date'], $data['price'], $data['statut']]);
-        $newId = $db->lastInsertId();
-        $stmt = $db->prepare("
-            SELECT b.id, c.patient, b.client_id, s.nom AS service, b.service_id,
-                   b.`date`, b.price, b.statut
-            FROM bookings b
-            LEFT JOIN clients c ON b.client_id = c.id
-            LEFT JOIN services s ON b.service_id = s.id
-            WHERE b.id = ?
-        ");
-        $stmt->execute([$newId]);
-        echo json_encode($stmt->fetch(PDO::FETCH_ASSOC));
+        $stmt = $db->prepare("INSERT INTO bookings (patient, service, `date`, price, statut) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$data['patient'], $data['service'], $data['date'], $data['price'], $data['statut']]);
+        $data['id'] = $db->lastInsertId();
+        echo json_encode($data);
     } catch (PDOException $e) {
         http_response_code(500);
         echo json_encode(['error' => 'DB error: ' . $e->getMessage()]);
@@ -56,8 +40,8 @@ if ($method === 'GET') {
 } elseif ($method === 'PUT' && $id) {
     $data = json_decode(file_get_contents('php://input'), true);
     try {
-        $stmt = $db->prepare("UPDATE bookings SET client_id=?, service_id=?, `date`=?, price=?, statut=? WHERE id=?");
-        $stmt->execute([$data['client_id'], $data['service_id'], $data['date'], $data['price'], $data['statut'], $id]);
+        $stmt = $db->prepare("UPDATE bookings SET patient=?, service=?, `date`=?, price=?, statut=? WHERE id=?");
+        $stmt->execute([$data['patient'], $data['service'], $data['date'], $data['price'], $data['statut'], $id]);
         echo json_encode(['success' => true]);
     } catch (PDOException $e) {
         http_response_code(500);
